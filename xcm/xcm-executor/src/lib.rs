@@ -89,7 +89,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		maybe_shallow_weight: Option<Weight>,
 		trader: &mut Config::Trader,
 	) -> Result<Weight, XcmError> {
-		log::debug!(target: "runtime::xcm::execute","{:?}", &message);
+		log::debug!(target: "runtime::xcm::execute", "{:?}", &message);
 		// This is the weight of everything that cannot be paid for. This basically means all computation
 		// except any XCM which is behind an Order::BuyExecution.
 		let shallow_weight = maybe_shallow_weight
@@ -99,7 +99,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		Config::Barrier::should_execute(&origin, top_level, &message, shallow_weight, weight_credit)
 			.map_err(|()| XcmError::Barrier)?;
 
-		log::debug!(target: "runtime::xcm::execute","passed barrier");
+		log::debug!(target: "runtime::xcm::execute", "passed barrier");
 
 		// The surplus weight, defined as the amount by which `shallow_weight` plus all nested
 		// `shallow_weight` values (ensuring no double-counting and also known as `deep_weight`) is an
@@ -161,13 +161,20 @@ impl<Config: config::Config> XcmExecutor<Config> {
 
 				// TODO: #2841 #TRANSACTFILTER allow the trait to issue filters for the relay-chain
 				let message_call = call.take_decoded().map_err(|_| XcmError::FailedToDecode)?;
+				log::debug!(target: "runtime::xcm::transact", "decoded: {:?}", message_call);
 				let dispatch_origin = Config::OriginConverter::convert_origin(origin, origin_type)
 					.map_err(|_| XcmError::BadOrigin)?;
+				log::debug!(target: "runtime::xcm::transact", "converted origin");
 				let weight = message_call.get_dispatch_info().weight;
+				log::debug!(target: "runtime::xcm::transact", "weight: {}, limit: {}", weight, require_weight_at_most);
 				ensure!(weight <= require_weight_at_most, XcmError::TooMuchWeightRequired);
 				let actual_weight = match message_call.dispatch(dispatch_origin) {
-					Ok(post_info) => post_info.actual_weight,
+					Ok(post_info) => {
+						log::debug!(target: "runtime::xcm::transact", "success");
+						post_info.actual_weight
+					},
 					Err(error_and_info) => {
+						log::debug!(target: "runtime::xcm::transact", "failed");
 						// Not much to do with the result as it is. It's up to the parachain to ensure that the
 						// message makes sense.
 						error_and_info.post_info.actual_weight
