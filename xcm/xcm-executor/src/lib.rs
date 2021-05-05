@@ -89,6 +89,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		maybe_shallow_weight: Option<Weight>,
 		trader: &mut Config::Trader,
 	) -> Result<Weight, XcmError> {
+		log::debug!(target: "runtime::xcm::execute","{:?}", &message);
 		// This is the weight of everything that cannot be paid for. This basically means all computation
 		// except any XCM which is behind an Order::BuyExecution.
 		let shallow_weight = maybe_shallow_weight
@@ -97,6 +98,8 @@ impl<Config: config::Config> XcmExecutor<Config> {
 
 		Config::Barrier::should_execute(&origin, top_level, &message, shallow_weight, weight_credit)
 			.map_err(|()| XcmError::Barrier)?;
+
+		log::debug!(target: "runtime::xcm::execute","passed barrier");
 
 		// The surplus weight, defined as the amount by which `shallow_weight` plus all nested
 		// `shallow_weight` values (ensuring no double-counting and also known as `deep_weight`) is an
